@@ -13,7 +13,7 @@ typedef enum {
 
 typedef struct __attribute__((__packed__)) 
 {
-    uint8_t sz8;
+    uint16_t sz8;
     uint8_t type;
 } Header;
 
@@ -32,7 +32,7 @@ typedef struct __attribute__((__packed__))
 } Msg;
 
 /***** Getters - Header *****/
-inline static uint8_t getSize8(const Header *hdr)
+inline static uint16_t getSize8(const Header *hdr)
 {
     return ntohs(hdr->sz8);
 }
@@ -45,17 +45,17 @@ inline static uint8_t getType(const Header *hdr)
 /***** Getters - Payload *****/
 inline static uint64_t getTime_received(const Msg *pkg)
 {   
-    return ntohs(pkg->payload.time_field.time_received);
+    return ntohll(pkg->payload.time_field.time_received);
 }
 
 inline static uint64_t getTime_transmitted(const Msg *pkg)
 {   
-    return ntohs(pkg->payload.time_field.time_transmitted);
+    return ntohll(pkg->payload.time_field.time_transmitted);
 }
 
 void printType(const Msg *m);
-int sendMsg(int sockfd, const Msg *msg);
-int recvMsg(int sockfd, Msg *msg);
+int sendMsg(int sockfd, const Msg *msg, const struct sockaddr *dest_addr, socklen_t addrlen);
+int recvMsg(int sockfd, Msg *msg, struct sockaddr *src_addr, socklen_t *addrlen);
 
 /***** Setters *****/
 
@@ -63,11 +63,11 @@ inline static void setTimes(Msg *msg, uint64_t time_received, uint64_t time_tran
 {   
     msg->hdr.type = TYPE_SYN_RESP;
     msg->hdr.sz8 = htons(sizeof(Header) + sizeof(Time_field));
-    msg->payload.time_field.time_received = htons(time_received);
-    msg->payload.time_field.time_transmitted = htons(time_transmitted);
+    msg->payload.time_field.time_received = htonll(time_received);
+    msg->payload.time_field.time_transmitted = htonll(time_transmitted);
 }
 
-inline static void setRequest(Msg *msg, uint64_t time_received, uint64_t time_transmitted)
+inline static void setRequest(Msg *msg)
 {   
     msg->hdr.type = TYPE_SYN_REQ;
     msg->hdr.sz8 = htons(sizeof(Header));

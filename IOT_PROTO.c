@@ -16,14 +16,14 @@ void printType(const Msg *msg)
 // returns 1 if everything was OK
 // returns 0 if socket was closed
 // returns -1 if there was an error
-int sendMsg(int sockfd, const Msg *msg)
+int sendMsg(int sockfd, const Msg *msg, const struct sockaddr *dest_addr, socklen_t addrlen)
 {
     size_t toSend = ntohs(msg->hdr.sz8);
     ssize_t sent;
     uint8_t *ptr = (uint8_t *) msg;
 
     while( toSend ) {
-        sent = send(sockfd, ptr, toSend, 0);
+        sent = sendto(sockfd, ptr, toSend, 0, dest_addr, addrlen);
         if( (sent == -1 && errno != EINTR) || sent == 0 )
             return sent;
         toSend -= sent;
@@ -38,7 +38,7 @@ int sendMsg(int sockfd, const Msg *msg)
 // returns 1 if everything was OK
 // returns 0 if socket was closed
 // returns -1 if there was an error
-int recvMsg(int sockfd, Msg *msg)
+int recvMsg(int sockfd, Msg *msg, struct sockaddr *src_addr, socklen_t *addrlen)
 {
     size_t toRecv = sizeof(Header);
     ssize_t recvd;
@@ -46,7 +46,7 @@ int recvMsg(int sockfd, Msg *msg)
     int headerRecvd = 0;
 
     while( toRecv ) {
-        recvd = recv(sockfd, ptr, toRecv, 0);
+        recvd = recvfrom(sockfd, ptr, toRecv, 0, src_addr, addrlen);
         if( (recvd == -1 && errno != EINTR) || recvd == 0 )
             return recvd;
         toRecv -= recvd;

@@ -1,0 +1,23 @@
+gcc -Wall  main_server.c PROTO_DIST_QUEUE.c -o main_server
+./main_server 1234 12345
+
+gcc -Wall client_i.c IOT_PROTO.c -o client_i
+./client_i 123 1234
+
+gcc -Wall client_i_test.c IOT_PROTO.c -o client_i_test
+./client_i_Test 1234 40
+
+gcc -Wall exec_server.c PROTO_DIST_QUEUE.c -o exec_server
+./exec_server localhost 12345
+
+gcc -Wall test_parsing.c -o test_parsing
+./test_parsing
+
+
+
+for interactive:
+/bin/bash
+
+cd /Users/lucascalam/Documents/Luca\ Scalambrin/IB/6to_semestre/labo6/system_programming/practicas/final_project
+
+cd /Users/lucascalam/Documents/redes_demo
