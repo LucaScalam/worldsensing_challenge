@@ -1,11 +1,11 @@
-gcc -Wall  server.c IOT_PROTO.c -o server
-./server 123
+gcc -Wall  tserver.c tIOT_PROTO.c -o tserver
+./tserver 123
 
-gcc -Wall client_i.c IOT_PROTO.c -o client_i
-./client_i 123 1234
+gcc -Wall tclient_i.c tIOT_PROTO.c -o tclient_i
+./tclient_i 123 1234
 
-gcc -Wall client_i_test.c IOT_PROTO.c -o client_i_test
-./client_i_Test 1234 40
+gcc -Wall tclient_i_test.c tIOT_PROTO.c -o tclient_i_test
+./tclient_i_Test 1234 40
 
 gcc -Wall exec_server.c PROTO_DIST_QUEUE.c -o exec_server
 ./exec_server localhost 12345

@@ -1,4 +1,4 @@
-#include "IOT_PROTO.h"
+#include "tIOT_PROTO.h"
 
 //Creates socket in the server side
 int socketCreate_serv_side(char *port, struct sockaddr_in *serv_addr);

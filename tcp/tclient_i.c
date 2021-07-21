@@ -9,8 +9,8 @@
 #include <net/if.h>
 #include <sys/ioctl.h>
 
-#include "client_i.h"
-#include "IOT_PROTO.h"
+#include "tclient_i.h"
+#include "tIOT_PROTO.h"
 
 #define MAX_SECONDS 2       //time(in seconds) to get a drift of 1ms 
 #define SIMULATION_TIME 5       //time of simulation in minutes
@@ -23,7 +23,7 @@ void error(const char *msg)
 
 int main(int argc, char *argv[])
 {
-    int sock_father,sock_child;
+    int sock_father,sock_child = 0;
     unsigned simulated_time = 0,count_time = MAX_SECONDS;
     fd_set rfds;
     struct timeval tv;
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     }
 
     sock_father = socketCreate_serv_side(argv[1],&father_addr);
-    sock_child = socketCreate_cli_side(argv[2]);
+    // sock_child = socketCreate_cli_side(argv[2]);
 
     tv.tv_sec = 1;
     // tv.tv_usec = 250;
@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 
             if(FD_ISSET(sock_child, &rfds)){
     
-                err = recvMsg(sock_child,&pkg,(struct sockaddr *)&child_addr,(socklen_t *)&len);
+                err = recvMsg(sock_child,&pkg);
                 if (err == -1){
                     perror("ERROR recv msg");
                     break;
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
     }
 
     close(sock_father);
-    close(sock_child);
+    // close(sock_child);
     return 0;
 }
   
@@ -106,7 +106,7 @@ int socketCreate_serv_side(char *port, struct sockaddr_in *serv_addr){
     server = gethostbyname("localhost");
 
     printf("port: %d\n", portno);
-    sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) 
         error("ERROR opening socket");
 
@@ -117,6 +117,9 @@ int socketCreate_serv_side(char *port, struct sockaddr_in *serv_addr){
          (char *)&serv_addr->sin_addr.s_addr,
          server->h_length);
     serv_addr->sin_port = htons(portno);
+
+    if (connect(sockfd,(struct sockaddr *) serv_addr,sizeof(*serv_addr)) < 0) 
+        error("ERROR connecting");
 
     return sockfd;
 }
@@ -149,7 +152,7 @@ void sendTimes(int sockfd,time_t time_received,struct sockaddr *child_addr,sockl
     time_t time_transmitted;
     time(&time_transmitted);
     setTimes(&pkg,(uint64_t) time_received,(uint64_t) time_transmitted);
-    sendMsg(sockfd,&pkg,child_addr,addr_len);
+    sendMsg(sockfd,&pkg);
     printf("Times sent. \n");
 }
 
@@ -163,14 +166,14 @@ void child_protocol(int sockfd, const struct sockaddr *father_addr){
     unsigned int len;
     len = sizeof(child_addr);
     
-    tv.tv_sec = 2;
+    tv.tv_sec = 5;
     tv.tv_usec = 0;
 
     while(!flag_sync_received){
         time(&request_time);
         printf("Sending SYNC_REQ. \n");
         setRequest(&pkg);
-        sendMsg(sockfd,&pkg,father_addr,sizeof(struct sockaddr_in));
+        sendMsg(sockfd,&pkg);
 
         FD_ZERO(&rfds);
         FD_SET(sockfd, &rfds);
@@ -183,7 +186,7 @@ void child_protocol(int sockfd, const struct sockaddr *father_addr){
 
         if(FD_ISSET(sockfd, &rfds)){
             printf("Got something2 \n");
-            err = recvMsg2(sockfd,&pkg);
+            err = recvMsg(sockfd,&pkg);
             if (err == -1){
                 perror("ERROR recv msg");
                 break;
@@ -194,8 +197,8 @@ void child_protocol(int sockfd, const struct sockaddr *father_addr){
             if(getType(&pkg.hdr) == TYPE_SYN_RESP){
                 printf("Got SYNC_RESP. \n");
                 time(&response_time);
-                printf(" from msg: %u \n",getTime_received(&pkg));
-                printf(" from msg: %u \n",getTime_transmitted(&pkg));
+                printf(" from msg: %llu \n",getTime_received(&pkg));
+                printf(" from msg: %llu \n",getTime_transmitted(&pkg));
                 update_internal_clock(request_time,response_time,getTime_received(&pkg),getTime_transmitted(&pkg));
                 flag_sync_received = 1;
             } 

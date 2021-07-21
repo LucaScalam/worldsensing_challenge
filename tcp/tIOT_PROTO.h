@@ -19,8 +19,8 @@ typedef struct __attribute__((__packed__))
 
 typedef struct __attribute__((__packed__)) 
 {
-    uint32_t time_received;
-    uint32_t time_transmitted;
+    uint64_t time_received;
+    uint64_t time_transmitted;
 } Time_field;
 
 typedef struct __attribute__((__packed__))
@@ -43,33 +43,32 @@ inline static uint8_t getType(const Header *hdr)
 }
 
 /***** Getters - Payload *****/
-inline static uint32_t getTime_received(const Msg *pkg)
+inline static uint64_t getTime_received(const Msg *pkg)
 {   
     // printf("%llu \n",ntohll(pkg->payload.time_field.time_received));
-    return pkg->payload.time_field.time_received;
+    return ntohll(pkg->payload.time_field.time_received);
 }
 
-inline static uint32_t getTime_transmitted(const Msg *pkg)
+inline static uint64_t getTime_transmitted(const Msg *pkg)
 {   
-    return pkg->payload.time_field.time_transmitted;
+    return ntohll(pkg->payload.time_field.time_transmitted);
 }
 
 void printType(const Msg *m);
-int sendMsg(int sockfd, const Msg *msg, const struct sockaddr *dest_addr, socklen_t addrlen);
-int recvMsg(int sockfd, Msg *msg, struct sockaddr *src_addr, socklen_t *addrlen);
-int recvMsg2(int sockfd, Msg *msg);
+int sendMsg(int sockfd, const Msg *msg);
+int recvMsg(int sockfd, Msg *msg);
 
 /***** Setters *****/
 
-inline static void setTimes(Msg *msg, uint32_t time_received, uint32_t time_transmitted)
+inline static void setTimes(Msg *msg, uint64_t time_received, uint64_t time_transmitted)
 {   
     printf("setTimes function \n");
-    printf(" %u \n",time_received);
-    printf(" %u \n",time_transmitted);
+    printf(" %llu \n",time_received);
+    printf(" %llu \n",time_transmitted);
     msg->hdr.type = TYPE_SYN_RESP;
     msg->hdr.sz8 = htons(sizeof(Header) + sizeof(Time_field));
-    msg->payload.time_field.time_received = time_received;
-    msg->payload.time_field.time_transmitted = time_transmitted;
+    msg->payload.time_field.time_received = htonll(time_received);
+    msg->payload.time_field.time_transmitted = htonll(time_transmitted);
 }
 
 inline static void setRequest(Msg *msg)

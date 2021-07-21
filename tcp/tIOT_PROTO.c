@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include "IOT_PROTO.h"
+#include "tIOT_PROTO.h"
 
 
 void printType(const Msg *msg)
@@ -16,14 +16,14 @@ void printType(const Msg *msg)
 // returns 1 if everything was OK
 // returns 0 if socket was closed
 // returns -1 if there was an error
-int sendMsg(int sockfd, const Msg *msg, const struct sockaddr *dest_addr, socklen_t addrlen)
+int sendMsg(int sockfd, const Msg *msg)
 {
     size_t toSend = ntohs(msg->hdr.sz8);
     ssize_t sent;
     uint8_t *ptr = (uint8_t *) msg;
 
     while( toSend ) {
-        sent = sendto(sockfd, ptr, toSend, 0, dest_addr, addrlen);
+        sent = send(sockfd, ptr, toSend, 0);
         if( (sent == -1 && errno != EINTR) || sent == 0 )
             return sent;
         toSend -= sent;
@@ -38,28 +38,7 @@ int sendMsg(int sockfd, const Msg *msg, const struct sockaddr *dest_addr, sockle
 // returns 1 if everything was OK
 // returns 0 if socket was closed
 // returns -1 if there was an error
-int recvMsg(int sockfd, Msg *msg, struct sockaddr *src_addr, socklen_t *addrlen)
-{
-    size_t toRecv = sizeof(Header);
-    ssize_t recvd;
-    uint8_t *ptr = (uint8_t *) &msg->hdr;
-    int headerRecvd = 0;
-    while( toRecv ) {
-        recvd = recvfrom(sockfd, ptr, toRecv, 0, src_addr, addrlen);
-        if( (recvd == -1 && errno != EINTR) || recvd == 0 )
-            return recvd;
-        toRecv -= recvd;
-        ptr += recvd;
-        if( toRecv == 0 && headerRecvd == 0) {
-            headerRecvd = 1;
-            ptr = (uint8_t *) &msg->payload;
-            toRecv = ntohs(msg->hdr.sz8) - sizeof(Header);
-        }
-    }
-    return 1;
-}
-
-int recvMsg2(int sockfd, Msg *msg)
+int recvMsg(int sockfd, Msg *msg)
 {
     size_t toRecv = sizeof(Header);
     ssize_t recvd;

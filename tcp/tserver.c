@@ -9,8 +9,8 @@
 #include <net/if.h>
 #include <sys/ioctl.h>
 
-#include "client_i.h"
-#include "IOT_PROTO.h"
+#include "tclient_i.h"
+#include "tIOT_PROTO.h"
 
 #define MAX_SECONDS 60          //time(in seconds) to get a drift of 1ms 
 #define SIMULATION_TIME 60       //time of simulation in minutes
@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 
             if(FD_ISSET(sock_child, &rfds)){
     
-                err = recvMsg(sock_child,&pkg,(struct sockaddr *)&child_addr,(socklen_t *)&len);
+                err = recvMsg(sock_child,&pkg);
                 if (err == -1){
                     perror("ERROR recv msg");
                     break;
@@ -93,13 +93,13 @@ int main(int argc, char *argv[])
 }
 
 int socketCreate_cli_side(char *port){
-    int sockfd, portno, val = 1;
-    struct sockaddr_in serv_addr;
-
+    int sockfd, portno, val = 1,connfd;
+    struct sockaddr_in serv_addr,cli_addr;
+    socklen_t clilen;
     portno = atoi(port);
 
     printf("port: %d\n", portno);
-    sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) 
         error("ERROR opening socket");
 
@@ -111,8 +111,14 @@ int socketCreate_cli_side(char *port){
     if (bind(sockfd, (struct sockaddr *) &serv_addr,
             sizeof(serv_addr)) < 0) 
             perror("ERROR on binding");
-
-    return sockfd;
+    listen(sockfd,5);
+    clilen = sizeof(cli_addr);
+    connfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
+    if (connfd < 0) {
+        printf("server acccept failed...\n");
+        exit(0);
+    }
+    return connfd;
 }
 
 void sendTimes(int sockfd,time_t time_received,struct sockaddr *child_addr,socklen_t addr_len){
@@ -122,10 +128,9 @@ void sendTimes(int sockfd,time_t time_received,struct sockaddr *child_addr,sockl
     // printf(" size of %lu \n",sizeof(time_received));
     // printf(" %ld \n",time_received);
     // printf(" %ld \n",time_transmitted);
-    // setTimes(&pkg,(uint64_t) time_received,(uint64_t) time_transmitted);
-    setTimes(&pkg,15,15);
-    printf(" from msg: %u \n",getTime_received(&pkg));
-    sendMsg(sockfd,&pkg,child_addr,addr_len);
-    sendMsg(sockfd,&pkg,child_addr,addr_len);
+    setTimes(&pkg,(uint64_t) time_received,(uint64_t) time_transmitted);
+    // printf(" from msg: %llu \n",getTime_received(&pkg));
+    sendMsg(sockfd,&pkg);
+    // sendMsg(sockfd,&pkg,child_addr,addr_len);
     printf("Times sent. \n");
 }
