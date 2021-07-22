@@ -8,10 +8,13 @@
 #include <netdb.h> 
 #include <net/if.h>
 #include <sys/ioctl.h>
+#include <pthread.h>
 
-#include "tclient_i.h"
+#include "tserver.h"
 #include "tIOT_PROTO.h"
 
+#define SIMU_TIME 6             //seconds simulated each NANO_SECONDS ns
+#define NANO_EQ 500000          //ns transcurred in SIMU_TIME 
 #define MAX_SECONDS 60          //time(in seconds) to get a drift of 1ms 
 #define SIMULATION_TIME 60       //time of simulation in minutes
 
@@ -28,16 +31,32 @@ int main(int argc, char *argv[])
     fd_set rfds;
     struct timeval tv;
     int ret, err;
-    unsigned int len;
     Msg pkg;
-    time_t time_received;
-    struct sockaddr_in child_addr;
+    uint32_t time_received;
+    ThreadArg_t argThreadClock;
+    pthread_mutex_t clock_mtx;
+    pthread_t thread_child;
 
-    len = sizeof(child_addr);
+    int mx = pthread_mutex_init(&clock_mtx, NULL);
+    if( mx ) {
+        char buff[64];
+        strerror_r(mx,buff, sizeof(buff));
+        printf("Problem in pthread_mutex_init()1: %s \n", buff);
+        exit(-1);
+    }
+    argThreadClock.thr_arg_mtx = clock_mtx;
+    argThreadClock.flag = 0;
+    argThreadClock.time_counter = 0;
 
     if (argc < 2) {
-       fprintf(stderr,"usage %s hostname port \n", argv[0]);
+       fprintf(stderr,"usage %s port \n", argv[0]);
        exit(0);
+    }
+
+    int rc = pthread_create(&thread_child,NULL,threadClock,(void *)&argThreadClock);
+    if( rc ) {
+        perror("pthread_create()");
+        exit(-1);
     }
 
     sock_child = socketCreate_cli_side(argv[1]);
@@ -70,7 +89,7 @@ int main(int argc, char *argv[])
                 if(getType(&pkg.hdr) == TYPE_SYN_REQ){
                     printf("Got SYNC_REQ. Sending times... \n");
                     time(&time_received);
-                    sendTimes(sock_child, time_received,(struct sockaddr *)&child_addr,len);
+                    sendTimes(sock_child, time_received);
                 } 
             }else{
                 printf("No Msg from client \n");
@@ -121,7 +140,7 @@ int socketCreate_cli_side(char *port){
     return connfd;
 }
 
-void sendTimes(int sockfd,time_t time_received,struct sockaddr *child_addr,socklen_t addr_len){
+void sendTimes(int sockfd,time_t time_received){
     Msg pkg;
     time_t time_transmitted;
     time(&time_transmitted);
@@ -131,6 +150,16 @@ void sendTimes(int sockfd,time_t time_received,struct sockaddr *child_addr,sockl
     setTimes(&pkg,(uint64_t) time_received,(uint64_t) time_transmitted);
     // printf(" from msg: %llu \n",getTime_received(&pkg));
     sendMsg(sockfd,&pkg);
-    // sendMsg(sockfd,&pkg,child_addr,addr_len);
     printf("Times sent. \n");
+}
+
+void *threadClock(void *thr_arg){
+    ThreadArg_t *thread_arg = (ThreadArg_t*)thr_arg;
+    struct timespec time_value;
+    time_value.tv_nsec = NANO_EQ;
+
+    while(1){
+        nanosleep(&time_value,NULL);
+        thread_arg->time_counter++;
+    }
 }

@@ -12,7 +12,7 @@
 #include "tclient_i.h"
 #include "tIOT_PROTO.h"
 
-#define MAX_SECONDS 2       //time(in seconds) to get a drift of 1ms 
+#define MAX_SECONDS 5       //time(in seconds) to get a drift of 1ms 
 #define SIMULATION_TIME 5       //time of simulation in minutes
 
 void error(const char *msg)
@@ -147,7 +147,7 @@ int socketCreate_cli_side(char *port){
     return sockfd;
 }
 
-void sendTimes(int sockfd,time_t time_received,struct sockaddr *child_addr,socklen_t addr_len){
+void sendTimes(int sockfd,time_t time_received){
     Msg pkg;
     time_t time_transmitted;
     time(&time_transmitted);
@@ -185,7 +185,6 @@ void child_protocol(int sockfd, const struct sockaddr *father_addr){
         }    
 
         if(FD_ISSET(sockfd, &rfds)){
-            printf("Got something2 \n");
             err = recvMsg(sockfd,&pkg);
             if (err == -1){
                 perror("ERROR recv msg");
@@ -197,8 +196,6 @@ void child_protocol(int sockfd, const struct sockaddr *father_addr){
             if(getType(&pkg.hdr) == TYPE_SYN_RESP){
                 printf("Got SYNC_RESP. \n");
                 time(&response_time);
-                printf(" from msg: %llu \n",getTime_received(&pkg));
-                printf(" from msg: %llu \n",getTime_transmitted(&pkg));
                 update_internal_clock(request_time,response_time,getTime_received(&pkg),getTime_transmitted(&pkg));
                 flag_sync_received = 1;
             } 

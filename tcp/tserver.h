@@ -8,7 +8,7 @@ int socketCreate_cli_side(char* port);
 
 //Sends packet to child with timestamps corresponding to the 
 //received and transmitted times
-void sendTimes(int sockfd,time_t time_received,struct sockaddr *child_addr,socklen_t addr_len);
+void sendTimes(int sockfd,time_t time_received);
 
 //Protocol executed by child to get a sync pkg from father
 void child_protocol(int sockfd, const struct sockaddr *father_addr);
@@ -16,7 +16,8 @@ void child_protocol(int sockfd, const struct sockaddr *father_addr);
 //Sync internal clock of the client with timestamps from the pkg
 void update_internal_clock(time_t request_time,time_t response_time,uint64_t time_received,uint64_t time_transmitted);
 
-
+//Function to simulate clock
+void *threadClock(void *thr_arg);
 
 
 /*

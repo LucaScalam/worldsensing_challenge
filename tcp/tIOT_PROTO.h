@@ -6,6 +6,12 @@
 #include <string.h>
 #include <arpa/inet.h>
 
+typedef struct {
+    uint32_t time_counter;
+    unsigned flag;
+    pthread_mutex_t thr_arg_mtx;
+} ThreadArg_t;
+
 typedef enum {
     TYPE_SYN_REQ,
     TYPE_SYN_RESP
@@ -62,9 +68,6 @@ int recvMsg(int sockfd, Msg *msg);
 
 inline static void setTimes(Msg *msg, uint64_t time_received, uint64_t time_transmitted)
 {   
-    printf("setTimes function \n");
-    printf(" %llu \n",time_received);
-    printf(" %llu \n",time_transmitted);
     msg->hdr.type = TYPE_SYN_RESP;
     msg->hdr.sz8 = htons(sizeof(Header) + sizeof(Time_field));
     msg->payload.time_field.time_received = htonll(time_received);
