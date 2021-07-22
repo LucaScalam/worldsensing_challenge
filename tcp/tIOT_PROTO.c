@@ -58,3 +58,25 @@ int recvMsg(int sockfd, Msg *msg)
     }
     return 1;
 }
+
+
+/***** Shared functions *****/
+
+int driftGenerator(){
+    // if(rand() % 2 == 0){
+    if(2 % 2 == 0){
+        return 10;
+    }else{
+        return -10;
+    }
+
+}
+
+void sendTimes(int sockfd, uint32_t time_received){
+    Msg pkg;
+    uint32_t time_transmitted;
+    time_transmitted = time_received + PROC_TIME;
+    setTimes(&pkg,time_received, time_transmitted);
+    sendMsg(sockfd,&pkg);
+    printf("Times sent. \n");
+}

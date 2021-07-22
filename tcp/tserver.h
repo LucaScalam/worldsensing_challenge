@@ -1,23 +1,17 @@
 #include "tIOT_PROTO.h"
 
 //Creates socket in the server side
-int socketCreate_serv_side(char *port, struct sockaddr_in *serv_addr);
+// int socketCreate_serv_side(char *port, struct sockaddr_in *serv_addr);
 
 //Creates socket in the server side
 int socketCreate_cli_side(char* port);
 
 //Sends packet to child with timestamps corresponding to the 
 //received and transmitted times
-void sendTimes(int sockfd,time_t time_received);
-
-//Protocol executed by child to get a sync pkg from father
-void child_protocol(int sockfd, const struct sockaddr *father_addr);
-
-//Sync internal clock of the client with timestamps from the pkg
-void update_internal_clock(time_t request_time,time_t response_time,uint64_t time_received,uint64_t time_transmitted);
+// void sendTimes(int sockfd,ThreadArg_t *thr_arg, uint32_t time_received);
 
 //Function to simulate clock
-void *threadClock(void *thr_arg);
+void *threadClock_server(void *thr_arg);
 
 
 /*

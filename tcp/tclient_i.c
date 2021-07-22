@@ -8,12 +8,13 @@
 #include <netdb.h> 
 #include <net/if.h>
 #include <sys/ioctl.h>
+#include <pthread.h>
 
 #include "tclient_i.h"
 #include "tIOT_PROTO.h"
 
-#define MAX_SECONDS 5       //time(in seconds) to get a drift of 1ms 
-#define SIMULATION_TIME 5       //time of simulation in minutes
+// #define MAX_SECONDS 5       //time(in seconds) to get a drift of 1ms 
+// #define SIMULATION_TIME 5       //time of simulation in minutes
 
 void error(const char *msg)
 {
@@ -24,72 +25,107 @@ void error(const char *msg)
 int main(int argc, char *argv[])
 {
     int sock_father,sock_child = 0;
-    unsigned simulated_time = 0,count_time = MAX_SECONDS;
+    unsigned count = 0;
+    // unsigned simulated_time = 0;
     fd_set rfds;
-    struct timeval tv;
+    struct timeval time_out_sync;
     int ret, err;
-    unsigned int len;
     Msg pkg;
-    time_t time_received;
-    struct sockaddr_in child_addr, father_addr;
-
-    len = sizeof(child_addr);
+    uint32_t time_received;
+    struct sockaddr_in father_addr;
+    ThreadArg_t argThreadClock;
+    pthread_t thread_clock;
 
     if (argc < 3) {
        fprintf(stderr,"usage %s hostname port \n", argv[0]);
        exit(0);
     }
 
+    argThreadClock.flag = 0;
+    argThreadClock.time_counter = 0;
+
+    int condv = pthread_cond_init(&argThreadClock.cond_new_clock,NULL);
+    if( condv ) {
+        printf("ERROR; return code from pthread_cond_init() is %d\n", condv);
+        exit(-1);
+    }
+    condv = pthread_cond_init(&argThreadClock.cond_wait_sync_req,NULL);
+    if( condv ) {
+        printf("ERROR; return code from pthread_cond_init() is %d\n", condv);
+        exit(-1);
+    }
+    int mx = pthread_mutex_init(&argThreadClock.new_clock_mtx, NULL);
+    if( mx ) {
+        char buff[64];
+        strerror_r(mx,buff, sizeof(buff));
+        printf("Problem in pthread_mutex_init()1: %s \n", buff);
+        exit(-1);
+    }
+    mx = pthread_mutex_init(&argThreadClock.wait_sync_req_mtx, NULL);
+    if( mx ) {
+        char buff[64];
+        strerror_r(mx,buff, sizeof(buff));
+        printf("Problem in pthread_mutex_init()1: %s \n", buff);
+        exit(-1);
+    }
+
+    int rc = pthread_create(&thread_clock,NULL,threadClock_client,(void *)&argThreadClock);
+    if( rc ) {
+        perror("pthread_create()");
+        exit(-1);
+    }
+
     sock_father = socketCreate_serv_side(argv[1],&father_addr);
     // sock_child = socketCreate_cli_side(argv[2]);
 
-    tv.tv_sec = 1;
-    // tv.tv_usec = 250;
+    time_out_sync.tv_usec = TIME_OUT_SYNC;
+    // time_out_sync.tv_sec = TIME_OUT_SYNC2;
 
     while(1){
-        while(count_time != 0){
-            FD_ZERO(&rfds);
-            FD_SET(sock_child, &rfds);
+        pthread_mutex_lock(&argThreadClock.wait_sync_req_mtx);
+        pthread_cond_wait(&argThreadClock.cond_wait_sync_req,&argThreadClock.wait_sync_req_mtx);
+        pthread_mutex_unlock(&argThreadClock.wait_sync_req_mtx);
 
-            ret = select(sock_child+1, &rfds,NULL,NULL,&tv);
-            if ( ret == -1 ){
-                perror("while_main_client");
-                return 0;
-            }    
+        FD_ZERO(&rfds);
+        FD_SET(sock_child, &rfds);
 
-            if(FD_ISSET(sock_child, &rfds)){
-    
-                err = recvMsg(sock_child,&pkg);
-                if (err == -1){
-                    perror("ERROR recv msg");
-                    break;
-                }else if(err == 0){
-                    perror("socket closed");
-                    break;
-                }
+        ret = select(sock_child+1, &rfds,NULL,NULL,&time_out_sync);
+        if ( ret == -1 ){
+            perror("while_main_client");
+            return 0;
+        }    
 
-                if(getType(&pkg.hdr) == TYPE_SYN_REQ){
-                    printf("Got SYNC_REQ. Sending times... \n");
-                    time(&time_received);
-                    sendTimes(sock_child, time_received,(struct sockaddr *)&child_addr,len);
-                } 
-            }else{
-                printf("No Msg from client \n");
+        if(FD_ISSET(sock_child, &rfds)){
+
+            err = recvMsg(sock_child,&pkg);
+            if (err == -1){
+                perror("ERROR recv msg");
+                break;
+            }else if(err == 0){
+                perror("socket closed");
+                break;
             }
-        
-            sleep(1-(tv.tv_sec));
-            count_time--;
-            printf("Count_time: %d \n", count_time);
+
+            if(getType(&pkg.hdr) == TYPE_SYN_REQ){
+                printf("Got SYNC_REQ. Sending times... \n");
+                time_received = argThreadClock.time_counter;
+                sendTimes(sock_child,time_received);
+            } 
+        }else{
+            count++;
+            printf("No Msg from client. Count: %d \n",count);
+            // if(count == SIMU_TIME){
+            //     count = 0;
+            // }
         }
 
-        //Drift of 1ms
-        child_protocol(sock_father,(const struct sockaddr *)&father_addr);
-
-        if(simulated_time >= SIMULATION_TIME){
-            break;
+        if(argThreadClock.flag == 1){
+            child_protocol(sock_father,&argThreadClock);
+            argThreadClock.flag = 0;
+            pthread_cond_signal(&argThreadClock.cond_new_clock);
         }
-        count_time = MAX_SECONDS;
-        simulated_time += 1;
+
+
     }
 
     close(sock_father);
@@ -101,7 +137,6 @@ int socketCreate_serv_side(char *port, struct sockaddr_in *serv_addr){
     int sockfd, portno;
     struct hostent *server;
     
-
     portno = atoi(port);
     server = gethostbyname("localhost");
 
@@ -147,72 +182,80 @@ int socketCreate_cli_side(char *port){
     return sockfd;
 }
 
-void sendTimes(int sockfd,time_t time_received){
+void child_protocol(int sockfd,ThreadArg_t *thr_arg){
     Msg pkg;
-    time_t time_transmitted;
-    time(&time_transmitted);
-    setTimes(&pkg,(uint64_t) time_received,(uint64_t) time_transmitted);
-    sendMsg(sockfd,&pkg);
-    printf("Times sent. \n");
-}
-
-void child_protocol(int sockfd, const struct sockaddr *father_addr){
-    Msg pkg;
-    fd_set rfds;
-    struct timeval tv;
-    time_t request_time, response_time;
-    int flag_sync_received = 0, ret, err;
-    struct sockaddr_in child_addr;
-    unsigned int len;
-    len = sizeof(child_addr);
+    uint32_t request_time, response_time;
+    int err;
     
-    tv.tv_sec = 5;
-    tv.tv_usec = 0;
+    request_time = thr_arg->time_counter;
+    printf("Sending SYNC_REQ. \n");
+    setRequest(&pkg);
+    sendMsg(sockfd,&pkg);
 
-    while(!flag_sync_received){
-        time(&request_time);
-        printf("Sending SYNC_REQ. \n");
-        setRequest(&pkg);
-        sendMsg(sockfd,&pkg);
-
-        FD_ZERO(&rfds);
-        FD_SET(sockfd, &rfds);
-
-        ret = select(sockfd+1, &rfds,NULL,NULL,&tv);
-        if ( ret == -1 ){
-            perror("select: child_protocol()");
-            return;
-        }    
-
-        if(FD_ISSET(sockfd, &rfds)){
-            err = recvMsg(sockfd,&pkg);
-            if (err == -1){
-                perror("ERROR recv msg");
-                break;
-            }else if(err == 0){
-                perror("socket closed");
-                break;
-            }
-            if(getType(&pkg.hdr) == TYPE_SYN_RESP){
-                printf("Got SYNC_RESP. \n");
-                time(&response_time);
-                update_internal_clock(request_time,response_time,getTime_received(&pkg),getTime_transmitted(&pkg));
-                flag_sync_received = 1;
-            } 
-        }else{
-            printf("No response from father \n");
-        }
+    err = recvMsg(sockfd,&pkg);
+    if (err == -1){
+        perror("ERROR recv msg");
+        return;
+    }else if(err == 0){
+        perror("socket closed");
+        return;
     }
 
+    if(getType(&pkg.hdr) == TYPE_SYN_RESP){
+        printf("Got SYNC_RESP. \n");
+        response_time = request_time + 2*TX_RX_TIME + PROC_TIME;
+        update_internal_clock(request_time,response_time,getTime_received(&pkg),getTime_transmitted(&pkg),thr_arg);
+    }
 }
 
-void update_internal_clock(time_t request_time,time_t response_time,uint64_t time_received,uint64_t time_transmitted){
+void update_internal_clock(uint32_t request_time,uint32_t response_time,uint32_t time_received,uint32_t time_transmitted,ThreadArg_t *thr_arg){
+    float theta, delt_1, delt_2, delta;
 
     printf("Times: \n");
-    printf(" %ld \n",request_time);
-    printf(" %ld \n",response_time);
-    printf(" from msg: %llu \n",time_received);
-    printf(" from msg: %llu \n",time_transmitted);
+    printf(" %u \n",request_time);
+    printf(" %u \n",response_time);
+    printf(" from msg: %u \n",time_received);
+    printf(" from msg: %u \n",time_transmitted);
+
+    delt_1 = time_received - (float)request_time;
+    delt_2 = time_transmitted - (float)response_time;
+    theta = (delt_1 + delt_2)/2;
+    // printf("d1: %f \n",delt_1);
+    // printf("d2: %f \n",delt_2);
+    printf("theta: %f \n",theta);
+    delta = response_time - request_time - (time_transmitted - time_received);
+
+    thr_arg->time_counter += theta ;
+    // printf("theta: %u \n",thr_arg->time_counter);
 
 
+
+}
+
+void *threadClock_client(void *thr_arg){
+    ThreadArg_t *thread_arg = (ThreadArg_t*)thr_arg;
+    struct timespec time_value;
+    // time_value.tv_nsec = NANO_EQ;
+    time_value.tv_sec = SEC_EQ;
+    // unsigned internal_count = 0;
+    while(1){
+        for(int i = 0; i < 5; i++){
+            nanosleep(&time_value,NULL);
+            pthread_cond_signal(&thread_arg->cond_wait_sync_req);
+            // nanosleep(&time_value,NULL);
+            thread_arg->time_counter += SIMU_TIME * M_SECONDS;
+            // if(i % 12 == 11){
+            //     thread_arg->time_counter += 1;
+            // }
+            // printf("clock time: %u ms, cpu %lu \n",thread_arg->time_counter,clock());
+            printf("clock time: %u ms \n",thread_arg->time_counter);
+            // printf("clock time: %u ms, cpu %lu \n",thread_arg->time_counter,clock()/CLOCKS_PER_SEC);
+        }
+        // pthread_cond_signal(&thread_arg->cond_wait_sync_req);
+        thread_arg->flag = 1;
+        pthread_mutex_lock(&thread_arg->new_clock_mtx);
+        pthread_cond_wait(&thread_arg->cond_new_clock,&thread_arg->new_clock_mtx);
+        pthread_mutex_unlock(&thread_arg->new_clock_mtx);
+    }  
+    pthread_exit(NULL);
 }
