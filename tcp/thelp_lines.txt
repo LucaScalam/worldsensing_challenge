@@ -4,6 +4,10 @@ gcc -Wall  tserver.c tIOT_PROTO.c -o tserver
 gcc -Wall tclient_i.c tIOT_PROTO.c -o tclient_i
 ./tclient_i 123 1234
 
+gcc -Wall tclient_end.c tIOT_PROTO.c -o tclient_end
+./tclient_end 1234
+
+
 gcc -Wall tclient_i_test.c tIOT_PROTO.c -o tclient_i_test
 ./tclient_i_Test 1234 40
 

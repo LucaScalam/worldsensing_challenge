@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
        fprintf(stderr,"usage %s port \n", argv[0]);
        exit(0);
     }
-
+    
     argThreadClock.flag = 0;
     argThreadClock.time_counter = 0;
 
@@ -69,6 +69,15 @@ int main(int argc, char *argv[])
         printf("Problem in pthread_mutex_init()1: %s \n", buff);
         exit(-1);
     }
+
+    mx = pthread_mutex_init(&argThreadClock.counter_mtx, NULL);
+    if( mx ) {
+        char buff[64];
+        strerror_r(mx,buff, sizeof(buff));
+        printf("Problem in pthread_mutex_init()3: %s \n", buff);
+        exit(-1);
+    }
+    
 
     sock_child = socketCreate_cli_side(argv[1]);
 
@@ -108,8 +117,10 @@ int main(int argc, char *argv[])
 
             if(getType(&pkg.hdr) == TYPE_SYN_REQ){
                 printf("Got SYNC_REQ. Sending times... \n");
+                pthread_mutex_lock(&argThreadClock.counter_mtx);
                 time_received = argThreadClock.time_counter;
                 argThreadClock.time_counter += TX_RX_TIME + PROC_TIME; 
+                pthread_mutex_unlock(&argThreadClock.counter_mtx);
                 sendTimes(sock_child,time_received);
             } 
         }else{
@@ -152,33 +163,31 @@ int socketCreate_cli_side(char *port){
     return connfd;
 }
 
-// void sendTimes(int sockfd,ThreadArg_t *thr_arg, uint32_t time_received){
-//     Msg pkg;
-//     uint32_t time_transmitted;
-//     time_transmitted = thr_arg->time_counter;
-//     // printf(" size of %lu \n",sizeof(time_received));
-//     // printf(" %ld \n",time_received);
-//     // printf(" %ld \n",time_transmitted);
-//     setTimes(&pkg,time_received,time_transmitted);
-//     // printf(" from msg: %llu \n",getTime_received(&pkg));
-//     sendMsg(sockfd,&pkg);
-//     printf("Times sent. \n");
-// }
 
 void *threadClock_server(void *thr_arg){
     ThreadArg_t *thread_arg = (ThreadArg_t*)thr_arg;
     struct timespec time_value;
-    // time_value.tv_nsec = NANO_EQ;
-    time_value.tv_sec = SEC_EQ;
+    unsigned global_count = 0;
+    time_value.tv_nsec = NANO_EQ;
+    // time_value.tv_sec = SEC_EQ;
 
-    while(1){
+    FILE *fp;
+    fp=fopen("server.csv","w+");
+    fprintf(fp,"atomic clock time [us]\n");
+
+    while(global_count < NUM_ITER_SIM * 240){
         nanosleep(&time_value,NULL);
         pthread_cond_signal(&thread_arg->cond_wait_sync_req);
-        // nanosleep(&time_value,NULL);
-        // nanosleep(&time_value,NULL);
-        thread_arg->time_counter += SIMU_TIME * M_SECONDS;
+
+        pthread_mutex_lock(&thread_arg->counter_mtx);
+        thread_arg->time_counter += SIMU_TIME * MICRO_SECONDS;
+        pthread_mutex_unlock(&thread_arg->counter_mtx);
         // printf("clock time: %u ms, cpu %lu \n",thread_arg->time_counter,clock());
-        printf("Atomic time: %u ms\n",thread_arg->time_counter);
+        printf("Atomic time: %u us\n",thread_arg->time_counter);
+        fprintf(fp,"%d,  %u us\n",global_count, thread_arg->time_counter);
+        global_count++;
     }  
+
+    fclose(fp);
     pthread_exit(NULL);
 }

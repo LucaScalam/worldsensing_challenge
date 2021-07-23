@@ -62,6 +62,8 @@ int recvMsg(int sockfd, Msg *msg)
 
 /***** Shared functions *****/
 
+//Generates a drift of 10, positive or
+//negative
 int driftGenerator(){
     // if(rand() % 2 == 0){
     if(2 % 2 == 0){
@@ -72,6 +74,8 @@ int driftGenerator(){
 
 }
 
+//Sends packet to child, where timestamps for 
+//reception and transmission are contained
 void sendTimes(int sockfd, uint32_t time_received){
     Msg pkg;
     uint32_t time_transmitted;
@@ -80,3 +84,55 @@ void sendTimes(int sockfd, uint32_t time_received){
     sendMsg(sockfd,&pkg);
     printf("Times sent. \n");
 }
+
+
+
+/*
+//Initialization of parameters for the thread that will work as a clock
+void paramsInit(ThreadArg_t *argThreadClock, pthread_t *thread_cr, void *function_thread){
+
+    argThreadClock->flag = 0;
+    argThreadClock->time_counter = 0;
+    printf("hola \n");
+    int condv = pthread_cond_init(&argThreadClock->cond_new_clock,NULL);
+    if( condv ) {
+        printf("ERROR; return code from pthread_cond_init() is %d\n", condv);
+        exit(-1);
+    }
+    condv = pthread_cond_init(&argThreadClock->cond_wait_sync_req,NULL);
+    if( condv ) {
+        printf("ERROR; return code from pthread_cond_init() is %d\n", condv);
+        exit(-1);
+    }
+    int mx = pthread_mutex_init(&argThreadClock->new_clock_mtx, NULL);
+    if( mx ) {
+        char buff[64];
+        strerror_r(mx,buff, sizeof(buff));
+        printf("Problem in pthread_mutex_init()1: %s \n", buff);
+        exit(-1);
+    }
+    mx = pthread_mutex_init(&argThreadClock->wait_sync_req_mtx, NULL);
+    if( mx ) {
+        char buff[64];
+        strerror_r(mx,buff, sizeof(buff));
+        printf("Problem in pthread_mutex_init()2: %s \n", buff);
+        exit(-1);
+    }
+
+    mx = pthread_mutex_init(&argThreadClock->counter_mtx, NULL);
+    if( mx ) {
+        char buff[64];
+        strerror_r(mx,buff, sizeof(buff));
+        printf("Problem in pthread_mutex_init()3: %s \n", buff);
+        exit(-1);
+    }
+
+    int rc = pthread_create(thread_cr,NULL,function_thread,(void *)&argThreadClock);
+    if( rc ) {
+        perror("pthread_create()");
+        exit(-1);
+    }
+
+
+
+*/
