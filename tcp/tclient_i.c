@@ -225,7 +225,7 @@ void update_internal_clock(uint32_t request_time,uint32_t response_time,uint32_t
     printf("theta: %f \n",theta);
     delta = response_time - request_time - (time_transmitted - time_received);
 
-    thr_arg->time_counter += theta ;
+    thr_arg->time_counter = response_time + theta ;
     // printf("theta: %u \n",thr_arg->time_counter);
 
 

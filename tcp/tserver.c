@@ -109,6 +109,7 @@ int main(int argc, char *argv[])
             if(getType(&pkg.hdr) == TYPE_SYN_REQ){
                 printf("Got SYNC_REQ. Sending times... \n");
                 time_received = argThreadClock.time_counter;
+                argThreadClock.time_counter += TX_RX_TIME + PROC_TIME; 
                 sendTimes(sock_child,time_received);
             } 
         }else{
