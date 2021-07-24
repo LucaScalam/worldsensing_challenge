@@ -1,11 +1,19 @@
 gcc -Wall  tserver.c tIOT_PROTO.c -o tserver
-./tserver 123
+./tserver 1111
 
 gcc -Wall tclient_i.c tIOT_PROTO.c -o tclient_i
-./tclient_i 123 1234
+./tclient_i 1111 2222
+
+gcc -Wall tclient_i.c tIOT_PROTO.c -o tclient_2
+./tclient_2 2222 3333
+
+gcc -Wall tclient_i.c tIOT_PROTO.c -o tclient_3
+./tclient_3 3333 4444
 
 gcc -Wall tclient_end.c tIOT_PROTO.c -o tclient_end
-./tclient_end 1234
+./tclient_end 4444
+
+
 
 
 gcc -Wall tclient_i_test.c tIOT_PROTO.c -o tclient_i_test

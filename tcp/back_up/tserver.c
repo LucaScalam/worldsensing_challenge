@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
     // struct timespec sleep_time;
     int ret, err;
     Msg pkg;
-    uint32_t time_received, time_transmitted;
+    uint64_t time_received, time_transmitted;
     ThreadArg_t argThreadClock;
     // pthread_mutex_t clock_mtx;
     pthread_t thread_clock;
@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
                 nanosleep(&time_value,NULL);
                 // pthread_mutex_lock(&argThreadClock.counter_mtx);
                 // time_transmitted = argThreadClock.time_counter;
-                time_transmitted = time_received + MICRO_SECONDS * SIMU_TIME;
+                time_transmitted = time_received + NANO_SECONDS * SIMU_TIME;
                 // argThreadClock.time_counter += TX_RX_TIME + PROC_TIME; 
                 // pthread_mutex_unlock(&argThreadClock.counter_mtx);
                 sendTimes(sock_child,time_received,time_transmitted);
@@ -193,12 +193,12 @@ void *threadClock_server(void *thr_arg){
         pthread_cond_signal(&thread_arg->cond_wait_sync_req);
 
         pthread_mutex_lock(&thread_arg->counter_mtx);
-        thread_arg->time_counter += SIMU_TIME * MICRO_SECONDS;
+        thread_arg->time_counter += SIMU_TIME * NANO_SECONDS;
         pthread_mutex_unlock(&thread_arg->counter_mtx);
         // printf("clock time: %u ms, cpu %lu \n",thread_arg->time_counter,clock());
-        printf("Atomic time: %u ns\n",thread_arg->time_counter);
+        printf("Atomic time: %llu ns\n",thread_arg->time_counter);
         gettimeofday(&real_time, 0);
-        fprintf(fp,"%d,%lu,%lu,%u\n",global_count,(long)real_time.tv_sec, (long)real_time.tv_usec, thread_arg->time_counter);
+        fprintf(fp,"%d,%lu,%lu,%llu\n",global_count,(long)real_time.tv_sec, (long)real_time.tv_usec, thread_arg->time_counter);
         global_count++;
     }  
 

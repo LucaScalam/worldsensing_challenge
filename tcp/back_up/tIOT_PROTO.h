@@ -9,7 +9,7 @@
 
 // #define NUM_ITER_SYNC_REQ 5            //number of iterations needed to send a SYNC_REQ to father
 #define SECONDS_FOR_DRIFT 60            //seconds(simulated) needed to have a drift of 1ms
-#define NUM_ITER_SIM 10                //total number of loops for the simulation
+#define NUM_ITER_SIM 2                //total number of loops for the simulation
 #define NANO_SECONDS 1000000000          //ns in 1 second
 #define MICRO_SECONDS 1000000          //us in 1 second
 #define MILI_SECONDS 1000           //ms in 1 second
@@ -23,7 +23,7 @@
 #define TX_RX_TIME 28              //time in ms from tx to rx and viceversa.
 
 typedef struct {
-    uint32_t time_counter;
+    uint64_t time_counter;
     pthread_mutex_t counter_mtx;
     unsigned flag;
     pthread_cond_t cond_new_clock;
@@ -45,8 +45,8 @@ typedef struct __attribute__((__packed__))
 
 typedef struct __attribute__((__packed__)) 
 {
-    uint32_t time_received;
-    uint32_t time_transmitted;
+    uint64_t time_received;
+    uint64_t time_transmitted;
 } Time_field;
 
 typedef struct __attribute__((__packed__))
@@ -69,32 +69,32 @@ inline static uint8_t getType(const Header *hdr)
 }
 
 /***** Getters - Payload *****/
-inline static uint32_t getTime_received(const Msg *pkg)
+inline static uint64_t getTime_received(const Msg *pkg)
 {   
     // printf("%llu \n",ntohll(pkg->payload.time_field.time_received));
-    return ntohl(pkg->payload.time_field.time_received);
+    return ntohll(pkg->payload.time_field.time_received);
 }
 
-inline static uint32_t getTime_transmitted(const Msg *pkg)
+inline static uint64_t getTime_transmitted(const Msg *pkg)
 {   
-    return ntohl(pkg->payload.time_field.time_transmitted);
+    return ntohll(pkg->payload.time_field.time_transmitted);
 }
 
 void printType(const Msg *m);
 int sendMsg(int sockfd, const Msg *msg);
 int recvMsg(int sockfd, Msg *msg);
 int driftGenerator();
-void sendTimes(int sockfd, uint32_t time_received,uint32_t time_transmitted);
+void sendTimes(int sockfd, uint64_t time_received,uint64_t time_transmitted);
 // void paramsInit(ThreadArg_t *argThreadClock, pthread_t *thread_cr, void *function_thread);
 
 /***** Setters *****/
 
-inline static void setTimes(Msg *msg, uint32_t time_received, uint32_t time_transmitted)
+inline static void setTimes(Msg *msg, uint64_t time_received, uint64_t time_transmitted)
 {   
     msg->hdr.type = TYPE_SYN_RESP;
     msg->hdr.sz8 = htons(sizeof(Header) + sizeof(Time_field));
-    msg->payload.time_field.time_received = htonl(time_received);
-    msg->payload.time_field.time_transmitted = htonl(time_transmitted);
+    msg->payload.time_field.time_received = htonll(time_received);
+    msg->payload.time_field.time_transmitted = htonll(time_transmitted);
 }
 
 inline static void setRequest(Msg *msg)

@@ -200,7 +200,7 @@ int socketCreate_cli_side(char *port){
 
 void child_protocol(int sockfd,ThreadArg_t *thr_arg){
     Msg pkg;
-    uint32_t request_time, response_time;
+    uint64_t request_time, response_time;
     int err;
     struct timespec time_value;
 
@@ -230,19 +230,19 @@ void child_protocol(int sockfd,ThreadArg_t *thr_arg){
             nanosleep(&time_value,NULL);
         }
         // response_time = thr_arg->time_counter;
-        response_time = thr_arg->time_counter + (int) (11 * SIMU_TIME * MICRO_SECONDS);
+        response_time = thr_arg->time_counter + (int) (11 * SIMU_TIME * NANO_SECONDS);
         update_internal_clock(request_time,response_time,getTime_received(&pkg),getTime_transmitted(&pkg),thr_arg);
     }
 }
 
-void update_internal_clock(uint32_t request_time,uint32_t response_time,uint32_t time_received,uint32_t time_transmitted,ThreadArg_t *thr_arg){
+void update_internal_clock(uint64_t request_time,uint64_t response_time,uint64_t time_received,uint64_t time_transmitted,ThreadArg_t *thr_arg){
     float theta, delt_1, delt_2;
 
     printf("Times: \n");
-    printf(" %u \n",request_time);
-    printf(" %u \n",response_time);
-    printf(" from msg: %u \n",time_received);
-    printf(" from msg: %u \n",time_transmitted);
+    printf(" %llu \n",request_time);
+    printf(" %llu \n",response_time);
+    printf(" from msg: %llu \n",time_received);
+    printf(" from msg: %llu \n",time_transmitted);
 
     delt_1 = time_received - (float)request_time;
     delt_2 = time_transmitted - (float)response_time;
@@ -280,16 +280,16 @@ void *threadClock_client(void *thr_arg){
                 nanosleep(&time_value,NULL);
                 pthread_cond_signal(&thread_arg->cond_wait_sync_req);
                 pthread_mutex_lock(&thread_arg->counter_mtx);
-                thread_arg->time_counter += SIMU_TIME * MICRO_SECONDS + 1;
+                thread_arg->time_counter += SIMU_TIME * NANO_SECONDS + 167;
                 // pthread_mutex_unlock(&thread_arg->counter_mtx);
                 // if(i % 4 == 11){
                     // pthread_mutex_lock(&thread_arg->counter_mtx);
                     // thread_arg->time_counter += 8;
                     pthread_mutex_unlock(&thread_arg->counter_mtx);
                 // }
-                printf("clock time: %u ns \n",thread_arg->time_counter);
+                printf("clock time: %llu ns \n",thread_arg->time_counter);
                 gettimeofday(&real_time, 0);
-                fprintf(fp,"%d,%lu,%lu,%u\n",i,(long)real_time.tv_sec, (long)real_time.tv_usec, thread_arg->time_counter);
+                fprintf(fp,"%d,%lu,%lu,%llu\n",i,(long)real_time.tv_sec, (long)real_time.tv_usec, thread_arg->time_counter);
             }
         }
         local_flag = 1;

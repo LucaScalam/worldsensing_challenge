@@ -2,17 +2,17 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Dec 10 09:57:20 2020
-Reading data_4 file
+Reading data_5 file
 @author: lucascalam
 """
 import numpy as np
 import csv
 import matplotlib.pyplot as plt
 
-reader = csv.reader(open("data_4/server.csv"), delimiter=",")
+reader = csv.reader(open("data_5/server.csv"), delimiter=",")
 # reader = csv.reader(open("server.csv"), delimiter=",")
 
-NUM_ITER_SIM = 1
+NUM_ITER_SIM = 2
 loops_for_drift = 1200
 micro_in_seconds = 1000000
 ct_server = 1
@@ -23,6 +23,8 @@ server_index = np.zeros(arr_size+NUM_ITER_SIM-1)
 server_time = np.zeros(arr_size+NUM_ITER_SIM-1)
 client_1_index = np.zeros(arr_size)
 client_1_time = np.zeros(arr_size)
+client_2_index = np.zeros(arr_size)
+client_2_time = np.zeros(arr_size)
 client_end_index = np.zeros(arr_size)
 client_end_time = np.zeros(arr_size)
 
@@ -45,7 +47,7 @@ print(f'muestras totales: {i}')
 
 
 #%%
-reader = csv.reader(open("data_4/client_i.csv"), delimiter=",")
+reader = csv.reader(open("data_5/client_1.csv"), delimiter=",")
 # reader = csv.reader(open("client_i.csv"), delimiter=",")
 i=0
 flag = 0
@@ -64,7 +66,25 @@ for row in reader:
 print(f'muestras totales: {i}')
     
 #%%
-reader = csv.reader(open("data_4/client_end.csv"), delimiter=",")
+reader = csv.reader(open("data_5/client_2.csv"), delimiter=",")
+# reader = csv.reader(open("client_i.csv"), delimiter=",")
+i=0
+flag = 0
+# offset = 0
+for row in reader:
+    if(flag == 0):
+        flag = 1
+        pass
+    else:
+        # if(offset == 0):
+            # offset = int(row[1][:-1] + '0')
+        print(row)        
+        client_2_index[i] = int(row[2]) + (int(row[1]) - offset)*micro_in_seconds
+        client_2_time[i] = int(row[3])
+        i = i + 1
+print(f'muestras totales: {i}')
+#%%
+reader = csv.reader(open("data_5/client_end.csv"), delimiter=",")
 # reader = csv.reader(open("client_end.csv"), delimiter=",")
 i=0
 flag = 0
@@ -84,7 +104,7 @@ print(f'muestras totales: {i}')
 
 #%%
 
-samples = 1200
+samples = 2400
 
 lim_inf_server = 34
 lim_sup_server = samples - lim_inf_1

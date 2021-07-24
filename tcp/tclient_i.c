@@ -246,7 +246,7 @@ void child_protocol(int sockfd,ThreadArg_t *thr_arg){
         for(int i = 0;i < 5;i++){
             nanosleep(&time_value,NULL);
         }
-        response_time = thr_arg->time_counter + 550000;
+        response_time = thr_arg->time_counter + (int) (11 * SIMU_TIME * MICRO_SECONDS) ;
         update_internal_clock(request_time,response_time,getTime_received(&pkg),getTime_transmitted(&pkg),thr_arg);
     }
 }
@@ -284,8 +284,8 @@ void *threadClock_client(void *thr_arg){
     struct timeval real_time;
 
     FILE *fp;
-    fp=fopen("client_i.csv","w+");
-    fprintf(fp,"counter,seconds,micro seconds,local clock [us]\n");
+    fp=fopen("client_1.csv","w+");
+    fprintf(fp,"counter,seconds,micro seconds,local clock [ns]\n");
     
     while(global_count < NUM_ITER_SIM+1){
         
@@ -302,7 +302,7 @@ void *threadClock_client(void *thr_arg){
                     // thread_arg->time_counter += 4;
                     pthread_mutex_unlock(&thread_arg->counter_mtx);
                 // }
-                printf("clock time: %u us \n",thread_arg->time_counter);
+                printf("clock time: %u ns \n",thread_arg->time_counter);
                 gettimeofday(&real_time, 0);
                 fprintf(fp,"%d,%lu,%lu,%u\n",i,(long)real_time.tv_sec, (long)real_time.tv_usec, thread_arg->time_counter);
             }
