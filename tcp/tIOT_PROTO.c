@@ -76,10 +76,10 @@ int driftGenerator(){
 
 //Sends packet to child, where timestamps for 
 //reception and transmission are contained
-void sendTimes(int sockfd, uint32_t time_received){
+void sendTimes(int sockfd, uint32_t time_received,uint32_t time_transmitted){
     Msg pkg;
-    uint32_t time_transmitted;
-    time_transmitted = time_received + PROC_TIME;
+    // uint32_t time_transmitted;
+    // time_transmitted = time_received;
     setTimes(&pkg,time_received, time_transmitted);
     sendMsg(sockfd,&pkg);
     printf("Times sent. \n");

@@ -24,20 +24,24 @@ void error(const char *msg)
 
 int main(int argc, char *argv[])
 {
-    int sock_father,sock_child = 0;
+    int sock_father = 0,sock_child;
     unsigned count = 0;
     // unsigned simulated_time = 0;
     fd_set rfds;
     struct timeval time_out_sync;
     int ret, err;
     Msg pkg;
-    uint32_t time_received;
+    uint32_t time_received,time_transmitted;
     struct sockaddr_in father_addr;
     ThreadArg_t argThreadClock;
     pthread_t thread_clock;
+    struct timespec time_value;
+    
+    time_value.tv_sec = 0;
+    time_value.tv_nsec = NANO_EQ;
 
     if (argc < 3) {
-       fprintf(stderr,"usage %s hostname port \n", argv[0]);
+       fprintf(stderr,"usage %s port port \n", argv[0]);
        exit(0);
     }
 
@@ -77,17 +81,16 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
+    sock_father = socketCreate_serv_side(argv[1],&father_addr);
+    sock_child = socketCreate_cli_side(argv[2]);
+
     int rc = pthread_create(&thread_clock,NULL,threadClock_client,(void *)&argThreadClock);
     if( rc ) {
         perror("pthread_create()");
         exit(-1);
     }
 
-    sock_father = socketCreate_serv_side(argv[1],&father_addr);
-    // sock_child = socketCreate_cli_side(argv[2]);
-
     time_out_sync.tv_usec = TIME_OUT_SYNC;
-    // time_out_sync.tv_sec = TIME_OUT_SYNC2;
     
     while(1){
 
@@ -119,13 +122,19 @@ int main(int argc, char *argv[])
                 printf("Got SYNC_REQ. Sending times... \n");
                 pthread_mutex_lock(&argThreadClock.counter_mtx);
                 time_received = argThreadClock.time_counter;
-                argThreadClock.time_counter += TX_RX_TIME + PROC_TIME;
+                // argThreadClock.time_counter += TX_RX_TIME + PROC_TIME;
                 pthread_mutex_unlock(&argThreadClock.counter_mtx);
-                sendTimes(sock_child,time_received);
-            } 
+                nanosleep(&time_value,NULL);
+                // pthread_mutex_lock(&argThreadClock.counter_mtx);
+                // time_transmitted = argThreadClock.time_counter;
+                // // argThreadClock.time_counter += TX_RX_TIME + PROC_TIME;
+                // pthread_mutex_unlock(&argThreadClock.counter_mtx);
+                time_transmitted = time_received + MICRO_SECONDS * SIMU_TIME;
+                sendTimes(sock_child,time_received,time_transmitted);
+            }   
         }else{
             count++;
-            printf("No Msg from client. Count: %d \n",count);
+            // printf("No Msg from client. Count: %d \n",count);
             // if(count == SIMU_TIME){
             //     count = 0;
             // }
@@ -141,7 +150,7 @@ int main(int argc, char *argv[])
     }
 
     close(sock_father);
-    // close(sock_child);
+    close(sock_child);
     return 0;
 }
   
@@ -159,7 +168,6 @@ int socketCreate_serv_side(char *port, struct sockaddr_in *serv_addr){
 
     bzero((char *) serv_addr, sizeof(serv_addr));
     serv_addr->sin_family = AF_INET;
-    // serv_addr->sin_addr.s_addr = INADDR_ANY;
     bcopy((char *)server->h_addr, 
          (char *)&serv_addr->sin_addr.s_addr,
          server->h_length);
@@ -168,17 +176,20 @@ int socketCreate_serv_side(char *port, struct sockaddr_in *serv_addr){
     if (connect(sockfd,(struct sockaddr *) serv_addr,sizeof(*serv_addr)) < 0) 
         error("ERROR connecting");
 
+    printf("Connected to father \n");
+
     return sockfd;
 }
 
 int socketCreate_cli_side(char *port){
-    int sockfd, portno, val = 1;
-    struct sockaddr_in serv_addr;
+    int sockfd, portno, val = 1,connfd;
+    struct sockaddr_in serv_addr,cli_addr;
+    socklen_t clilen;
 
     portno = atoi(port);
 
     printf("port: %d\n", portno);
-    sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) 
         error("ERROR opening socket");
 
@@ -187,20 +198,37 @@ int socketCreate_cli_side(char *port){
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     serv_addr.sin_port = htons(portno);
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val));
-    if (bind(sockfd, (struct sockaddr *) &serv_addr,
-            sizeof(serv_addr)) < 0) 
+    int bind_res = bind(sockfd, (struct sockaddr *) &serv_addr,
+            sizeof(serv_addr));
+    if (bind_res < 0) 
             perror("ERROR on binding");
+    listen(sockfd,5);
+    clilen = sizeof(cli_addr);
+    connfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
+    if (connfd < 0) {
+        printf("server acccept failed...\n");
+        exit(0);
+    }
 
-    return sockfd;
+    printf("Connected to child \n");
+
+    return connfd;
 }
 
 void child_protocol(int sockfd,ThreadArg_t *thr_arg){
     Msg pkg;
     uint32_t request_time, response_time;
     int err;
+    struct timespec time_value;
+
+    time_value.tv_sec = 0;
+    time_value.tv_nsec = NANO_EQ;
     
     request_time = thr_arg->time_counter;
     printf("Sending SYNC_REQ. \n");
+    for(int i = 0;i < 5;i++){
+        nanosleep(&time_value,NULL);
+    }
     setRequest(&pkg);
     sendMsg(sockfd,&pkg);
 
@@ -215,7 +243,10 @@ void child_protocol(int sockfd,ThreadArg_t *thr_arg){
 
     if(getType(&pkg.hdr) == TYPE_SYN_RESP){
         printf("Got SYNC_RESP. \n");
-        response_time = request_time + 2*TX_RX_TIME + PROC_TIME;
+        for(int i = 0;i < 5;i++){
+            nanosleep(&time_value,NULL);
+        }
+        response_time = thr_arg->time_counter + 550000;
         update_internal_clock(request_time,response_time,getTime_received(&pkg),getTime_transmitted(&pkg),thr_arg);
     }
 }
@@ -223,11 +254,11 @@ void child_protocol(int sockfd,ThreadArg_t *thr_arg){
 void update_internal_clock(uint32_t request_time,uint32_t response_time,uint32_t time_received,uint32_t time_transmitted,ThreadArg_t *thr_arg){
     float theta, delt_1, delt_2;
 
-    // printf("Times: \n");
-    // printf(" %u \n",request_time);
-    // printf(" %u \n",response_time);
-    // printf(" from msg: %u \n",time_received);
-    // printf(" from msg: %u \n",time_transmitted);
+    printf("Times: \n");
+    printf(" %u \n",request_time);
+    printf(" %u \n",response_time);
+    printf(" from msg: %u \n",time_received);
+    printf(" from msg: %u \n",time_transmitted);
 
     delt_1 = time_received - (float)request_time;
     delt_2 = time_transmitted - (float)response_time;
@@ -239,41 +270,46 @@ void update_internal_clock(uint32_t request_time,uint32_t response_time,uint32_t
 
     thr_arg->time_counter = response_time + theta ;
     // printf("theta: %u \n",thr_arg->time_counter);
-
-
-
 }
 
 void *threadClock_client(void *thr_arg){
     ThreadArg_t *thread_arg = (ThreadArg_t*)thr_arg;
     struct timespec time_value;
     unsigned global_count = 0;
+    time_value.tv_sec = 0;
     time_value.tv_nsec = NANO_EQ;
+    unsigned local_flag = 0;
     // time_value.tv_sec = SEC_EQ;
     // unsigned internal_count = 0;
+    struct timeval real_time;
 
     FILE *fp;
     fp=fopen("client_i.csv","w+");
-    fprintf(fp,"clock time [us]\n");
+    fprintf(fp,"counter,seconds,micro seconds,local clock [us]\n");
+    
+    while(global_count < NUM_ITER_SIM+1){
+        
+        if(local_flag){
+            for(int i = 0; i < (int) SECONDS_FOR_DRIFT/SIMU_TIME; i++){
 
-    while(global_count < NUM_ITER_SIM){
-        for(int i = 0; i < 240; i++){
-
-            nanosleep(&time_value,NULL);
-            pthread_cond_signal(&thread_arg->cond_wait_sync_req);
-            pthread_mutex_lock(&thread_arg->counter_mtx);
-            thread_arg->time_counter += SIMU_TIME * MICRO_SECONDS;
-            pthread_mutex_unlock(&thread_arg->counter_mtx);
-            if(i % 12 == 11){
+                nanosleep(&time_value,NULL);
+                pthread_cond_signal(&thread_arg->cond_wait_sync_req);
                 pthread_mutex_lock(&thread_arg->counter_mtx);
-                thread_arg->time_counter += 50;
-                pthread_mutex_unlock(&thread_arg->counter_mtx);
+                thread_arg->time_counter += SIMU_TIME * MICRO_SECONDS + 1;
+                // pthread_mutex_unlock(&thread_arg->counter_mtx);
+                // if(i % 12 == 11){
+                    // pthread_mutex_lock(&thread_arg->counter_mtx);
+                    // thread_arg->time_counter += 4;
+                    pthread_mutex_unlock(&thread_arg->counter_mtx);
+                // }
+                printf("clock time: %u us \n",thread_arg->time_counter);
+                gettimeofday(&real_time, 0);
+                fprintf(fp,"%d,%lu,%lu,%u\n",i,(long)real_time.tv_sec, (long)real_time.tv_usec, thread_arg->time_counter);
             }
-            printf("clock time: %u us \n",thread_arg->time_counter);
-            fprintf(fp,"%d,  %u us\n",i,thread_arg->time_counter);
         }
+        local_flag = 1;
         thread_arg->flag = 1;
-        // pthread_cond_signal(&thread_arg->cond_wait_sync_req);
+        pthread_cond_signal(&thread_arg->cond_wait_sync_req);   
 
         pthread_mutex_lock(&thread_arg->new_clock_mtx);
         pthread_cond_wait(&thread_arg->cond_new_clock,&thread_arg->new_clock_mtx);
@@ -281,6 +317,7 @@ void *threadClock_client(void *thr_arg){
         global_count++;
     }  
 
+    printf("Ending clock... \n");
     fclose(fp);
     pthread_exit(NULL);
 }

@@ -9,6 +9,7 @@
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <pthread.h>
+#include <sys/time.h>
 
 #include "tserver.h"
 #include "tIOT_PROTO.h"
@@ -32,11 +33,15 @@ int main(int argc, char *argv[])
     // struct timespec sleep_time;
     int ret, err;
     Msg pkg;
-    uint32_t time_received;
+    uint32_t time_received, time_transmitted;
     ThreadArg_t argThreadClock;
     // pthread_mutex_t clock_mtx;
     pthread_t thread_clock;
+    struct timespec time_value;
 
+    time_value.tv_sec = 0;
+    time_value.tv_nsec = NANO_EQ;
+    
     if (argc < 2) {
        fprintf(stderr,"usage %s port \n", argv[0]);
        exit(0);
@@ -78,17 +83,15 @@ int main(int argc, char *argv[])
         exit(-1);
     }
     
-
-    sock_child = socketCreate_cli_side(argv[1]);
-
     int rc = pthread_create(&thread_clock,NULL,threadClock_server,(void *)&argThreadClock);
     if( rc ) {
         perror("pthread_create()");
         exit(-1);
     }
 
+    sock_child = socketCreate_cli_side(argv[1]);
+
     time_out_sync.tv_usec = TIME_OUT_SYNC;
-    // time_out_sync.tv_sec = TIME_OUT_SYNC2;
 
     while(1){
         pthread_mutex_lock(&argThreadClock.wait_sync_req_mtx);
@@ -119,13 +122,18 @@ int main(int argc, char *argv[])
                 printf("Got SYNC_REQ. Sending times... \n");
                 pthread_mutex_lock(&argThreadClock.counter_mtx);
                 time_received = argThreadClock.time_counter;
-                argThreadClock.time_counter += TX_RX_TIME + PROC_TIME; 
                 pthread_mutex_unlock(&argThreadClock.counter_mtx);
-                sendTimes(sock_child,time_received);
+                nanosleep(&time_value,NULL);
+                // pthread_mutex_lock(&argThreadClock.counter_mtx);
+                // time_transmitted = argThreadClock.time_counter;
+                time_transmitted = time_received + MICRO_SECONDS * SIMU_TIME;
+                // argThreadClock.time_counter += TX_RX_TIME + PROC_TIME; 
+                // pthread_mutex_unlock(&argThreadClock.counter_mtx);
+                sendTimes(sock_child,time_received,time_transmitted);
             } 
         }else{
             count++;
-            printf("No Msg from client. Count: %d \n",count);
+            // printf("No Msg from client. Count: %d \n",count);
 
         }
     }
@@ -138,6 +146,7 @@ int socketCreate_cli_side(char *port){
     int sockfd, portno, val = 1,connfd;
     struct sockaddr_in serv_addr,cli_addr;
     socklen_t clilen;
+
     portno = atoi(port);
 
     printf("port: %d\n", portno);
@@ -169,13 +178,17 @@ void *threadClock_server(void *thr_arg){
     struct timespec time_value;
     unsigned global_count = 0;
     time_value.tv_nsec = NANO_EQ;
+    struct timeval real_time;
+    // long seconds = 0, microseconds = 0;
+
     // time_value.tv_sec = SEC_EQ;
 
     FILE *fp;
     fp=fopen("server.csv","w+");
-    fprintf(fp,"atomic clock time [us]\n");
+    fprintf(fp,"counter,seconds,micro seconds,local clock [us]\n");
 
-    while(global_count < NUM_ITER_SIM * 240){
+    while(global_count < (int) (SECONDS_FOR_DRIFT * NUM_ITER_SIM / SIMU_TIME) + NUM_ITER_SIM - 1){
+    // while(1){
         nanosleep(&time_value,NULL);
         pthread_cond_signal(&thread_arg->cond_wait_sync_req);
 
@@ -184,10 +197,12 @@ void *threadClock_server(void *thr_arg){
         pthread_mutex_unlock(&thread_arg->counter_mtx);
         // printf("clock time: %u ms, cpu %lu \n",thread_arg->time_counter,clock());
         printf("Atomic time: %u us\n",thread_arg->time_counter);
-        fprintf(fp,"%d,  %u us\n",global_count, thread_arg->time_counter);
+        gettimeofday(&real_time, 0);
+        fprintf(fp,"%d,%lu,%lu,%u\n",global_count,(long)real_time.tv_sec, (long)real_time.tv_usec, thread_arg->time_counter);
         global_count++;
     }  
 
+    printf("Ending clock... \n");
     fclose(fp);
     pthread_exit(NULL);
 }

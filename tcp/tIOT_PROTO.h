@@ -7,15 +7,15 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 
-#define SECONDS_FOR_DRIFT 60            //seconds needed to have a drift of 1ms
-#define NUM_ITER_SIM 2                //total number of loops for the simulation
+// #define NUM_ITER_SYNC_REQ 5            //number of iterations needed to send a SYNC_REQ to father
+#define SECONDS_FOR_DRIFT 60            //seconds(simulated) needed to have a drift of 1ms
+#define NUM_ITER_SIM 1                //total number of loops for the simulation
 #define MICRO_SECONDS 1000000          //us in 1 second
 #define MILI_SECONDS 1000           //ms in 1 second
-#define SIMU_TIME 0.250             //seconds simulated each NANO_EQ ns or each SEC_EQ seconds
-#define NANO_EQ 500000000        //ns transcurred in SIMU_TIME 
+#define SIMU_TIME 0.050             //seconds simulated each NANO_EQ ns or each SEC_EQ seconds
+#define NANO_EQ 200000000        //ns transcurred in SIMU_TIME 
 #define SEC_EQ 1                //seconds transcurred in SIMU_TIME
-#define TIME_OUT_SYNC 100000     //real time out for a sync_request in us
-#define TIME_OUT_SYNC2 2    
+#define TIME_OUT_SYNC 1000     //real time out for a sync_request in us (100000)
 // #define SLEEP_TIME 25000000        //real sleep time for the device, before waiting for a sync_request, in ns
 // #define RECALC_SIMU_TIME 60      //number to recalculate real time transcurred in SIMU_TIME
 #define PROC_TIME 4             //time in ms to get a SYNC_REQ and send the SYNC_RESP
@@ -83,7 +83,7 @@ void printType(const Msg *m);
 int sendMsg(int sockfd, const Msg *msg);
 int recvMsg(int sockfd, Msg *msg);
 int driftGenerator();
-void sendTimes(int sockfd, uint32_t time_received);
+void sendTimes(int sockfd, uint32_t time_received,uint32_t time_transmitted);
 // void paramsInit(ThreadArg_t *argThreadClock, pthread_t *thread_cr, void *function_thread);
 
 /***** Setters *****/
