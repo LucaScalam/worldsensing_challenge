@@ -284,7 +284,7 @@ void *threadClock_client(void *thr_arg){
     struct timeval real_time;
 
     FILE *fp;
-    fp=fopen("client_1.csv","w+");
+    fp=fopen("client_3.csv","w+");
     fprintf(fp,"counter,seconds,micro seconds,local clock [ns]\n");
     
     while(global_count < NUM_ITER_SIM+1){
