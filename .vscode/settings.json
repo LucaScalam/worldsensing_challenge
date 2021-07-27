@@ -1,5 +1,9 @@
 {
     "files.associations": {
-        "socket.h": "c"
+        "socket.h": "c",
+        "t2iot_proto.h": "c",
+        "t3client_1.h": "c",
+        "t3client_i.h": "c",
+        "t3iot_proto.h": "c"
     }
 }
