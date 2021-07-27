@@ -14,8 +14,8 @@ micro_in_seconds = 1000000
 
 #%%
 
-reader = csv.reader(open("data_5/client_end.csv"), delimiter=",")
-# reader = csv.reader(open("client_end.csv"), delimiter=",")
+# reader = csv.reader(open("data_5/client_end.csv"), delimiter=",")
+reader = csv.reader(open("client_end.csv"), delimiter=",")
 aux = []
 aux_idx = []
 i=0
@@ -37,8 +37,8 @@ print(len(index_cli_end))
 #%%
 
 
-reader = csv.reader(open("data_5/client_1.csv"), delimiter=",")
-# reader = csv.reader(open("client_end.csv"), delimiter=",")
+# reader = csv.reader(open("data_5/client_1.csv"), delimiter=",")
+reader = csv.reader(open("client_1.csv"), delimiter=",")
 aux = []
 aux_idx = []
 i=0
@@ -60,8 +60,8 @@ print(len(index_cli_1))
 #%%
 
 
-reader = csv.reader(open("data_5/client_i.csv"), delimiter=",")
-# reader = csv.reader(open("client_end.csv"), delimiter=",")
+# reader = csv.reader(open("data_5/client_i.csv"), delimiter=",")
+reader = csv.reader(open("client_i.csv"), delimiter=",")
 aux = []
 aux_idx = []
 i=0
@@ -84,8 +84,8 @@ print(len(index_cli_i))
 #%%
 
 
-reader = csv.reader(open("data_5/client_ii.csv"), delimiter=",")
-# reader = csv.reader(open("client_end.csv"), delimiter=",")
+# reader = csv.reader(open("data_5/client_ii.csv"), delimiter=",")
+reader = csv.reader(open("client_ii.csv"), delimiter=",")
 aux = []
 aux_idx = []
 i=0
@@ -108,8 +108,8 @@ print(len(index_cli_ii))
 #%%
 
 
-reader = csv.reader(open("data_5/server.csv"), delimiter=",")
-# reader = csv.reader(open("client_end.csv"), delimiter=",")
+# reader = csv.reader(open("data_5/server.csv"), delimiter=",")
+reader = csv.reader(open("server.csv"), delimiter=",")
 aux = []
 aux_idx = []
 i=0
@@ -134,7 +134,7 @@ print(len(index_server))
 # server_tmp = np.linspace(server[0],server[len(client_1)-1],len(client_1))
 # index = np.arange(0,len(client_1))
 
-limit = 5000
+limit = 9000
 
 dif_1_1 = client_1[:limit] - server[:limit]
 index_1_1 = index_cli_1[:limit]*1e-6
