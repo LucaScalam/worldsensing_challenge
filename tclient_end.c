@@ -38,6 +38,7 @@ int main(int argc, char *argv[])
 
     argThreadClock.flag = 0;
     argThreadClock.time_counter = 0;
+    // argThreadClock.time_counter = SIMU_TIME * MICRO_SECONDS * 3;
 
     int condv = pthread_cond_init(&argThreadClock.cond_wait_sync_req,NULL);
     if( condv ) {
@@ -225,7 +226,7 @@ void *threadClock_client(void *thr_arg){
 
     recvMsg(thread_arg->sock_father,&pkg_sync);
     printf("Type %d \n",getType(&pkg_sync.hdr));
-    sendMsg(thread_arg->sock_child,&pkg_sync);
+    // sendMsg(thread_arg->sock_child,&pkg_sync);
 
     while(global_count < NUM_ITER_SIM + 1){
 

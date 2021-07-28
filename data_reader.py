@@ -216,3 +216,51 @@ plt.ylabel('Simulated clock [us]',fontsize=18);
 plt.show()
 
 
+
+
+#%%
+### Accuracy 2
+
+limit_acc_inf = 0
+limit_acc = 15
+
+client_1_3 = client_1[limit_acc_inf:limit_acc]*1e-6
+index_1_3 = index_cli_1[limit_acc_inf:limit_acc]*1e-6
+
+client_end_3 = client_end[limit_acc_inf:limit_acc]*1e-6
+index_end_3 = index_cli_end[limit_acc_inf:limit_acc]*1e-6
+
+client_i_3 = client_i[limit_acc_inf:limit_acc]*1e-6
+index_i_3 = index_cli_i[limit_acc_inf:limit_acc]*1e-6
+
+client_ii_3 = client_ii[limit_acc_inf:limit_acc]*1e-6
+index_ii_3 = index_cli_ii[limit_acc_inf:limit_acc]*1e-6
+
+server_1_3 = server[limit_acc_inf:limit_acc]*1e-6
+index_server_1_3 = index_server[limit_acc_inf:limit_acc]*1e-6
+
+
+#%%
+
+
+fig = plt.figure(figsize=(12,6))
+ax = fig.add_subplot(1, 1, 1)
+
+ax.scatter(index_1_3,client_1_3,color='#17becf',s=400)
+ax.scatter(index_i_3,client_i_3,s=250)
+ax.scatter(index_ii_3,client_ii_3,s=100)
+ax.scatter(index_end_3,client_end_3,color='#7f7f7f',s=70)
+ax.scatter(index_server_1_3,server_1_3,color ='#e377c2',s=50)
+list_legend = ['Client 1', 'Client i', 'Client ii','Client end','Server']
+ax.grid()
+plt.title('Timestamps from simulated node clocks',fontsize=18)
+ax.legend(list_legend,fontsize=14,shadow=True)
+plt.xticks(fontsize=18)
+plt.yticks(fontsize=18)
+# plt.axhline(color='black', lw=0.5)
+# plt.axvline(color='black', lw=0.5)
+plt.xlabel("Real time from laptop clock [s]",fontsize=18);
+plt.ylabel('Simulated clock [s]',fontsize=18);
+plt.savefig('clock_acc_2.pdf')
+plt.show()
+

@@ -43,6 +43,7 @@ int main(int argc, char *argv[])
 
     argThreadClock.flag = 0;
     argThreadClock.time_counter = 0;
+    // argThreadClock.time_counter = SIMU_TIME * MICRO_SECONDS * 2;
 
     int condv = pthread_cond_init(&argThreadClock.cond_wait_sync_req,NULL);
     if( condv ) {

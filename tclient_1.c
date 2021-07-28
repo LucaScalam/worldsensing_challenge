@@ -41,24 +41,14 @@ int main(int argc, char *argv[])
 
     argThreadClock.flag = 1;
     argThreadClock.time_counter = 0;
+    // argThreadClock.time_counter = SIMU_TIME * MICRO_SECONDS * 1;
 
-    // int condv = pthread_cond_init(&argThreadClock.cond_new_clock,NULL);
-    // if( condv ) {
-    //     printf("ERROR; return code from pthread_cond_init() is %d\n", condv);
-    //     exit(-1);
-    // }
     int condv = pthread_cond_init(&argThreadClock.cond_wait_sync_req,NULL);
     if( condv ) {
         printf("ERROR; return code from pthread_cond_init() is %d\n", condv);
         exit(-1);
     }
-    // int mx = pthread_mutex_init(&argThreadClock.new_clock_mtx, NULL);
-    // if( mx ) {
-    //     char buff[64];
-    //     strerror_r(mx,buff, sizeof(buff));
-    //     printf("Problem in pthread_mutex_init()1: %s \n", buff);
-    //     exit(-1);
-    // }
+
     int mx = pthread_mutex_init(&argThreadClock.wait_sync_req_mtx, NULL);
     if( mx ) {
         char buff[64];
